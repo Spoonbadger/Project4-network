@@ -60,7 +60,7 @@ class PostTestCase(TestCase):
     def test_post_create(self):
         post_obj = Post.objects.create(post_content="The distinction of rank presevered.", sender=self.user1)
         self.assertTrue(post_obj.is_valid_post())
-        self.assertEqual(post_obj.id, 41)
+        self.assertEqual(post_obj.id, 4)
         self.assertEqual(post_obj.sender, self.user1)
 
 
