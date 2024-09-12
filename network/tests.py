@@ -3,15 +3,15 @@ from django.test import TestCase, Client
 # Create your tests here.
 from .models import Post, Like, User
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-import pathlib
-import os
+# from selenium import webdriver
+# from selenium.webdriver.common.by import By
+# import pathlib
+# import os
 
-def file_uri(filename):
-    return pathlib.Path(os.path.abspath(filename)).as_uri()
+# def file_uri(filename):
+#    return pathlib.Path(os.path.abspath(filename)).as_uri()
 
-driver = webdriver.Chrome()
+# driver = webdriver.Chrome()
 
 
 # Check each view, check each webpage loads, check webpages if logged in or logged out...
