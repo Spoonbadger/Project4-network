@@ -1,12 +1,10 @@
-// import './styles.css';
-
-
+// import React, {useEffect, useState} from 'react';
 
 function NewPostForm({ onPostCreated }) {
     const [content, setContent] = React.useState('');
     const [loading, setLoading] = React.useState(false);
 
-    const handleSubmit = async (event) => {
+    const handleSubmitPost = async (event) => {
         event.preventDefault();
         setLoading(true);
 
@@ -39,7 +37,7 @@ function NewPostForm({ onPostCreated }) {
     return (
         <div style={{ border: 'solid lightgrey 1px', margin: '35px' }}>
             <h3 id="new-post-title">New Post</h3>
-            <form style={{ margin: '30px', marginTop: '20px', marginBottom: '20px' }} onSubmit={handleSubmit}>
+            <form style={{ margin: '30px', marginTop: '20px', marginBottom: '20px' }} onSubmit={handleSubmitPost}>
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
@@ -64,7 +62,7 @@ function NewPostForm({ onPostCreated }) {
 
 
 // Each post element
-function ProfilePosts({ post, liked, currentUser, handleLike, handleEdit, handleDelete }) {
+function Post({ post, liked=false, currentUser=null, handleLike, handleEdit, handleDelete }) {
     const [isEditing, setIsEditing] = React.useState(false);
     const [editedContent, setEditedContent] = React.useState(post.post_content)
     const [originalContent, setOriginalContent] = React.useState(post.post_content)
@@ -89,7 +87,7 @@ function ProfilePosts({ post, liked, currentUser, handleLike, handleEdit, handle
     }
 
     const deleteSqueek = () => {
-        if (window.confirm("Are you sure you want to delete this squeek? It can't be undone.")) {
+        if (window.confirm("Are you sure you want to delete this squeek?")) {
             handleDelete(post.id)
             setIsEditing(false)
         }
@@ -98,8 +96,12 @@ function ProfilePosts({ post, liked, currentUser, handleLike, handleEdit, handle
     return (
         <div style={{ border: 'solid lightgray 1px', margin: '35px', padding: '20px', paddingBottom: '8px' }}>
             <div>
-                <strong style={{ color: 'blue' }}>
-                    {post.sender}
+                <strong>
+                    {currentUser ? (
+                        <a href={`/profile/${post.sender_id}`}>{post.sender}</a>
+                    ) : (
+                        post.sender
+                )}
                 </strong> squeeks:
             </div>
             {isEditing ? (
@@ -128,13 +130,13 @@ function ProfilePosts({ post, liked, currentUser, handleLike, handleEdit, handle
                 </button>
                 <span id={`post-like-count-${post.id}`}>Likes: {post.like_count}</span>
             </div>
-            {post.sender === currentUser && (
+            {currentUser && post.sender === currentUser && (
                 <div>
                     {isEditing ? (
                         <div>
                             <button onClick={saveEdit} className="btn btn-warning" style={{padding: '5px'}} >Save</button>
                             <button onClick={cancelEdit} className="btn btn-light" style={{padding: '5px', marginLeft: '10px'}}>Cancel</button>
-                            <button onClick={deleteSqueek} className="btn btn-danger" style={{ padding: '5px', marginLeft: '10px' }}>Delete</button>
+                            <button onClick={deleteSqueek} className="btn btn-danger" style={{ padding: '5px', marginLeft: '10px' }}>Delete Squeek</button>
                         </div>
                     ) : (
                         <button onClick={editClicked} className="btn btn-light" style={{ padding: '5px', paddingLeft: '8px', paddingRight: '8px' }}>Edit</button>
@@ -144,6 +146,162 @@ function ProfilePosts({ post, liked, currentUser, handleLike, handleEdit, handle
         </div>
     );
 }
+
+
+
+// FETCH ALL THE POSTS
+function Posts( {userId} ) {
+    const [posts, setPosts] = React.useState([]);
+    const [currentUser, setCurrentUser] = React.useState(null);
+    const [likedPosts, setLikedPosts] = React.useState({});
+    const [loading, setLoading] = React.useState(false)
+    const [currentPage, setCurrentPage] = React.useState(1)
+    const [postsPerPage] = React.useState(10);
+
+    // Fetch ALL posts
+    React.useEffect(() => {
+        setLoading(true)
+        fetch('/all_posts/')
+        .then(response => response.json())
+        .then(data => {
+            setPosts(data.posts);
+            setCurrentUser(data.current_user || null);
+            setLikedPosts(data.liked_post || {});
+            setLoading(false)
+        });
+    }, []);
+
+
+    const handlePostCreated = () => {
+        // Refetch posts after a new post is created
+        fetch('/all_posts/')
+            .then(response => response.json())
+            .then(data => {
+                setPosts(data.posts);
+            });
+    };
+
+
+    const handleLike = (postId) => {
+        const csrftoken = getCookie('csrftoken');
+        fetch(`/like_unlike/${postId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            setPosts(posts.map(post => post.id === postId ? { ...post, liked: data.liked, like_count: data.like_count } : post));
+            setLikedPosts({ ...likedPosts, [postId]: data.liked });
+        })
+        .catch(error => console.error('Error liking/unliking post:', error));
+    };
+
+    const handleEdit = (postId, newContent) => {
+        fetch(`/edit_post/${postId}/`, {
+            method: 'PUT',
+            headers: {
+                "Content-type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                post_content: newContent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            setPosts(posts.map(post => post.id === postId ? 
+                {...post, post_content: newContent, edited_timestamp: data.edited_timestamp} : post));
+        })
+        .catch(error => console.log("Error editing post: ", error));
+    }
+
+    const handleDelete = (postId) => {
+        fetch(`/${postId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                "Content-type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log("Delete squeek successful.")
+                window.location.href = '/'
+            }
+            else {
+                console.log("Failure deleting tweet", response.statusText)
+            }
+        })
+    }
+
+    const indexOfLastPost = currentPage * postsPerPage;
+    const indexOfFirstPost = indexOfLastPost - postsPerPage;
+    const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost)
+    
+    const paginate = pageNumber => setCurrentPage(pageNumber)
+    React.useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage]);
+    
+
+    if (loading) {
+        return <div>Loading...</div>
+    }
+    else {
+        return (
+            <div>
+                <div>
+                    <NewPostForm onPostCreated={handlePostCreated} />
+                </div>
+                <div id="all-posts">
+                    {currentPosts.length === 0 ? <div>No posts, yet...</div> : currentPosts.map(post => (
+                        <Post 
+                            key={post.id} 
+                            post={post} 
+                            liked={likedPosts[post.id]} 
+                            currentUser={currentUser} 
+                            handleLike={handleLike}
+                            handleEdit={handleEdit}
+                            handleDelete={handleDelete}
+                        />
+                    ))}
+                    <Pagination 
+                        postsPerPage={postsPerPage}
+                        totalPosts={posts.length}
+                        paginate={paginate}
+                    />
+                </div>
+            </div>
+        );
+    }
+}
+// Put in ? : if no posts to display <div>No posts, yet...</div>
+
+
+function Pagination({ postsPerPage, totalPosts, paginate }) {
+    const pageNumbers = [];
+    for (let i = 1; i <= Math.ceil(totalPosts / postsPerPage); i++) {
+        pageNumbers.push(i)
+    }
+    return (
+        <nav>
+            <ul className = 'pagination'>
+                {pageNumbers.map(number => (
+                    <li key={number} className='page-item'>
+                        <a onClick={() => paginate(number)} href='#!' className='page-link'>
+                            {number}
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        </nav>
+    )
+}
+
 
 function getCookie(name) {
     let cookieValue = null;
@@ -161,278 +319,4 @@ function getCookie(name) {
 }
 
 
-
-
-// FETCH USER POSTS FOR PROFILE
-function Profile({ userId }) {
-    const [posts, setPosts] = React.useState([]);
-    const [currentUser, setCurrentUser] = React.useState(null);
-    const [currentUserId, setCurrentUserId] = React.useState(null)
-    const [likedPosts, setLikedPosts] = React.useState({});
-    const [isFollowing, setIsFollowing] = React.useState(false);
-    const [loading, setLoading] = React.useState(false)
-    const [currentPage, setCurrentPage] = React.useState(1)
-    const [postsPerPage] = React.useState(10)
-    const [ownProfile, setOwnProfile] = React.useState(false)
-    const [followingCount, setFollowingCount] = React.useState(0)
-    const [followersCount, setFollowersCount] = React.useState(0)
-
-    React.useEffect(() => {
-        setLoading(true)
-        fetch(`/api/profile/${userId}/`)
-            .then(response => response.json())
-            .then(data => {
-                console.log("Fetched data??: ", data.current_user_id)
-                setPosts(data.posts);
-                setCurrentUser(data.current_user);
-                setCurrentUserId(data.current_user_id)
-                setLikedPosts(data.liked_post);
-                setIsFollowing(data.following);
-                setOwnProfile(data.own_profile)
-                setFollowingCount(data.following_count)
-                setFollowersCount(data.followers_count)
-                setLoading(false)
-            })
-            .catch(error => console.error('Error fetching profile data:', error));
-    }, [userId]);
-
-
-    const handlePostCreated = () => {
-        // Refetch posts after a new post is created
-        fetch('/all_posts/')
-            .then(response => response.json())
-            .then(data => {
-                setPosts(data.posts);
-            });
-    };
-
-
-    const handleFollow = (userId) => {
-        const csrftoken = getCookie('csrftoken');
-        setLoading(true)
-        fetch(`/follow_unfollow/${userId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({})
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update state or refetch data as needed
-            setIsFollowing(data.following)
-            setFollowersCount(data.followers_count)
-            setFollowingCount(data.following_count)
-            setLoading(false)
-        })
-        .catch(error => console.error('Error following/unfollowing user:', error));
-        setLoading(false)
-    };
-
-
-    const handleLike = (postId) => {
-        const csrftoken = getCookie('csrftoken');
-        fetch(`/like_unlike/${postId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({})
-        })
-        .then(response => response.json())
-        .then(data => {
-            setPosts(posts.map(post => post.id === postId ? 
-                { ...post, 
-                liked: data.liked, 
-                like_count: data.like_count 
-            } : post));
-            setLikedPosts({ ...likedPosts, [postId]: data.liked });
-        })
-        .catch(error => console.error('Error liking/unliking post:', error));
-    };
-
-
-    const handleEdit = (postId, newContent) => {
-        fetch(`/edit_post/${postId}/`, {
-            method: 'POST',
-            headers: {
-                "Content-type": "application/json",
-                "X-CSRFToken": getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                post_content: newContent
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            setPosts(posts.map(post => post.id === postId ? 
-                {...post, post_content: newContent, edited_timestamp: data.edited_timestamp} : post));
-        })
-        .catch(error => console.log("Error editing post: ", error));
-    }
-
-
-    const handleDelete = (postId) => {
-        fetch(`/${postId}/delete/`, {
-            method: 'DELETE',
-            headers: {
-                "Content-type": "application/json",
-                "X-CSRFToken": getCookie('csrftoken')
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log("Squeek deleted successfully.")
-                window.location.href = '/';
-            }
-            else {
-                console.log("Failed to delete squeek", response.statusText)
-            }
-        })
-        .catch(error => console.error("Error: ", error))
-    }
-
-
-    const handleDeleteAccount = (userId) => {
-        console.log("user id??: ", userId)
-        if (window.confirm("You you sure you want to delete your account? You cannot undo deleting an account.")) {
-            fetch(`/delete_account/${userId}/`, {
-                method: 'DELETE',
-                headers: {
-                    "Content-type": "application/json",
-                    "X-CSRFToken": getCookie('csrftoken')
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    console.log("Account deletion successful")
-                    window.location.href = '/'
-                }
-                else {
-                    console.log("Failed to delete account", response.statusText)
-                }
-            })
-            .catch(error => console.error("Error: ", error))
-        }
-    }
-
-    const indexOfLastPost = currentPage * postsPerPage;
-    const indexOfFirstPost = indexOfLastPost - postsPerPage;
-    const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost)
-    
-    const paginate = pageNumber => setCurrentPage(pageNumber)
-    React.useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [currentPage]);
-
-    if (loading || !currentUser) {
-        return <div>Loading...</div>
-    }
-
-    if (posts.length === 0) {
-        return <div>No posts, yet...</div>
-    }
-
-    else {
-        // This needs to be here otherwise no posts show. TODO: look into why this works and also setting currentUser default as null instead of 
-        // having this Loading... check
-        // if (!currentUser) {
-        //    return <div>Loading...</div>;
-        // }
-        
-        if (currentUser.id != userId) {
-            return (
-                <div>
-                    <div>
-                        <NewPostForm onPostCreated={handlePostCreated} />
-                    </div>
-                    <div className="row">
-                        {!ownProfile && (
-                            <ProfileFollowingButton user={{ 
-                                id: userId, 
-                                username: currentUser.username, 
-                                following: isFollowing,
-                            }} 
-                            handleFollow={handleFollow}
-                            />
-                        )}
-                        <div style={{ marginTop: '20px', paddingLeft: '40px' }}>Following: {followingCount} Followers: {followersCount}</div>
-                        {ownProfile && (
-                            <div>
-                                <button className="btn btn-light" style={{ marginLeft: '15px' }} onClick={() => handleDeleteAccount(currentUserId)}>Delete account</button>
-                            </div>
-                        )}
-                    </div>
-                    <div id="all-posts">
-                        {currentPosts.map(post => (
-                            <ProfilePosts 
-                                key={post.id} 
-                                post={post} 
-                                liked={likedPosts[post.id]} 
-                                currentUser={currentUser} 
-                                handleLike={handleLike}
-                                handleEdit={handleEdit}
-                                handleDelete={handleDelete}
-                            />
-                        ))}
-                        <Pagination 
-                            postsPerPage={postsPerPage}
-                            totalPosts={posts.length}
-                            paginate={paginate}
-                        />
-                    </div>
-                </div>
-            );
-        }
-    }
-}
-
-
-function ProfileFollowingButton({ user, handleFollow }) {
-    const [isFollowing, setIsFollowing] = React.useState(user.following || false);
-
-    const toggleFollow = () => {
-        handleFollow(user.id);
-        setIsFollowing(!isFollowing);
-    };
-
-    return (
-        <div id="follow-unfollow-button" style={{ marginLeft: '50px', marginRight: '20px' }}>
-            <h3>{user.username}</h3>
-            {isFollowing ? (
-                <button onClick={toggleFollow} className="btn btn-warning">Unfollow</button>
-            ) : (
-                <button onClick={toggleFollow} className="btn btn-info">Follow</button>
-                )
-            } 
-        </div>
-    );
-}
-
-
-function Pagination({ postsPerPage, totalPosts, paginate}) {
-    const pageNumbers = []
-    for ( let i = 1; i <= Math.ceil(totalPosts / postsPerPage); i++) {
-        pageNumbers.push(i);
-    }
-    return (
-        <nav>
-            <ul className="pagination" style={{ display: 'flex', justifyContent: 'center', margin: '30px' }}>
-                {pageNumbers.map(number => (
-                    <li key={number} className="page-item">
-                        <a onClick={() => paginate(number)} href="#!" className="page-link">
-                            {number}
-                        </a>
-                    </li>
-                ))}
-            </ul>
-        </nav>
-    )
-};
-
-// Pass the user_id from Django context to React via a script tag
-const userId = window.userId;
-ReactDOM.render(<Profile userId={userId} />, document.getElementById('profile-view'));
-
+ReactDOM.render(<Posts />, document.getElementById('all-posts'));

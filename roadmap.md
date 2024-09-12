@@ -32,13 +32,18 @@ it does it!
     delete user
     tricky -> have the new post box as a form rather than through a html render
     tests in test to test the backend
+    test.py backend
+    test.py front end with Selenium
+    test is_valid from the module itself
+    github actions
+    Docker
+    NOT DONE AS NOT USING DJANGO REST API or running React properly -    organzie javascript files in a correct manner
+    @api_view?? - rest framework don't do.
         NEXT:
-    other tests (see harvard lectures)
+    is edit PUT??
 
     TODO (not in order):
-    @api_view??
-    is edit PUT??
-    organzie javascript files in a correct manner
+
 
     further ahead:
     get rid of the following.html and just have it load on the index, same with the profile.

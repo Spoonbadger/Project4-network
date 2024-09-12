@@ -93,6 +93,24 @@ def delete_squeek(request, post_id):
     return JsonResponse({"message": "Invalid request method"}, status=405)
 
 
+@login_required(login_url='login')
+def edit_post(request, post_id):
+    if request.user.is_authenticated:
+        if request.method == 'PUT':
+            post = Post.objects.get(id=post_id)
+            if request.user == post.sender:
+                data = json.loads(request.body)
+                post.post_content = data.get('post_content', '')
+                post.edited_timestamp = timezone.now()
+                post.save()
+                return JsonResponse({
+                    "edited_timestamp": post.edited_timestamp.strftime('%d %b, %Y at %H:%M'),
+                    "message": "Post edited successfully"
+                }, status=200)
+            else:
+                return JsonResponse({"Error": "Not authorized to edit post"}, status=403)
+
+
 @login_required
 def following_posts(request):
     if request.user.is_authenticated:
@@ -223,25 +241,6 @@ def new_post(request):
             errors = form.errors.as_json()
             return JsonResponse({'errors': errors}, status=400)
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
-
-
-
-@login_required(login_url='login')
-def edit_post(request, post_id):
-    if request.user.is_authenticated:
-        if request.method == 'POST':
-            post = Post.objects.get(id=post_id)
-            if request.user == post.sender:
-                data = json.loads(request.body)
-                post.post_content = data.get('post_content', '')
-                post.edited_timestamp = timezone.now()
-                post.save()
-                return JsonResponse({
-                    "edited_timestamp": post.edited_timestamp.strftime('%d %b, %Y at %H:%M'),
-                    "message": "Post edited successfully"
-                }, status=200)
-            else:
-                return JsonResponse({"Error": "Not authorized to edit post"}, status=403)
 
 
 @login_required(login_url='login')
