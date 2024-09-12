@@ -12,4 +12,5 @@ jobs:
           python-version: '3.x'
       - name: Run Django unit tests
         run: |
-          python manage.py test
+            pip3 install user django
+            python manage.py test
