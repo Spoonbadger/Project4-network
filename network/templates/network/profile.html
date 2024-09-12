@@ -1,0 +1,25 @@
+{% extends 'network/layout.html' %}
+{% load static %}
+
+{% block body %}
+    <div id="page-title"><h3 style="margin: 15px">{{ profile_person.username }}'s Profile</h3></div>
+
+    <div id="follow-unfollow-button">
+    </div>
+
+
+    <!-- CREATE NEW POST if user on own profile -->
+    <form id="post-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+    </form>
+
+
+    <!-- DISPLAY PROFILE POSTS-->
+    <div id="profile-view"></div>
+
+    <script>
+        window.userId = "{{ user_id }}"; 
+    </script>
+
+{% endblock %}

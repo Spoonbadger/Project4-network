@@ -1,0 +1,34 @@
+{% extends "network/layout.html" %}
+{% load static %}
+
+{% block body %}
+    <div id="page-title"><h3 id="all-posts-title" style="margin: 15px">All Posts</h3></div>
+
+    <!-- CREATE NEW POST -->
+    <!-- <div id="new-post">
+        {% if user.is_authenticated %}
+        <div id="post-container">
+            <h3 id="new-post-title">New Post</h3>
+            <form action="{% url 'new_post' %}" id="post-form" method="post">
+                {% csrf_token %}
+                <textarea autofocus id="new-post-content" class='new-post-content' name="new-post-content" placeholder="How are you feeling?..." required></textarea><br>
+                <input class="btn btn-primary" type="submit" value="Post">
+            </form>
+        </div>
+        {% endif %}
+    </div> -->
+
+    <form id="post-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+    </form>
+
+    <!-- DISPLAY ALL POSTS-->
+    <div id="all-posts"></div>
+
+    <!-- DISPLAY PROFILE POSTS-->
+
+
+
+
+{% endblock %}

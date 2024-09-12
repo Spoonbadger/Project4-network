@@ -1,0 +1,30 @@
+.post-element {
+    border: solid lightgray 1px;
+    margin: 20px;
+}
+
+/* All posts page design */
+
+
+#post-container {
+    border: solid lightgrey 1px;
+    margin: 35px;
+}
+
+#new-post-title {
+    margin: 15px;
+}
+
+#post-form {
+    margin: 30px;
+    margin-top:20px;
+}
+
+.new-post-content {
+    width: 100% !important;
+    border: solid lightgrey 1px;
+    background-color: rgba(217, 253, 208, 0.183);
+    box-sizing: border-box;
+    display: block;
+}
+
